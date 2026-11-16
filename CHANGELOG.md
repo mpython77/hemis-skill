@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1 — 2026-11-16
+- Verified live HEMIS `v1.9.90` / `Yadro 2.0.55` (`elFinder 2.1069`) via authenticated browser & HTTP inspection across all 37 quick-menu routes.
+- Fixed `parse_gridview()` (`hemis_oneid_auth.py`): supports `<span class="summary">1-50 / jami 1 306 ta</span>` (spaced thousands) and captures `.showModalButton` `value` modal URLs.
+- Hardened `_is_unsafe_hemis_get()` to block `/teacher/subject-task-list?...&attribute=...` (`changeAttribute` GET mutation).
+- Fixed `hemis_cli.py auth-save --stdin` to strip UTF-8 BOM (`\ufeff`) from Windows PowerShell pipelines.
+- Updated `references/` and `SKILL.md`: `check-grade` (`NB` disabled inputs, `404` on non-owned lessons), `qr-attendance` (`302` when saved, `opacity:0.3`), `attendance-journal` same-date cross-lesson render quirk, `subject-info` `X-Requested-With` requirement, `calendar-plan` PDF vs `check-overall-rating?access=1` `.docx`, `ESubjectTask` / `EExam` / `EPublication*` / `EStudentPttSubject` / `EDocumentSigner` / `ETeacherLoad` schemas, and `403`/`404`/`500` role boundaries.
+
 ## 1.0.0 — 2026-11-15
 - Pure-stdlib OneID → HEMIS client (`hemis_oneid_auth.py`): 6-step login, session verify/keepalive/auto re-login.
 - Embedded Thawte TLS RSA CA G1 for strict TLS on Windows/Linux/macOS.

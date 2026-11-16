@@ -37,19 +37,19 @@ class SelfTests(unittest.TestCase):
         self.assertEqual(res["checks_passed"], 5)
 
     def test_version_and_update_checker(self):
-        self.assertEqual(hemis_cli.get_local_version(), "1.0.0")
-        up = hemis_cli.check_for_updates(fetch_fn=lambda _u, _t: "1.1.0\n", local_version="1.0.0")
+        self.assertEqual(hemis_cli.get_local_version(), "1.0.1")
+        up = hemis_cli.check_for_updates(fetch_fn=lambda _u, _t: "1.1.0\n", local_version="1.0.1")
         self.assertTrue(up["checked"])
         self.assertTrue(up["update_available"])
         self.assertEqual(up["remote_version"], "1.1.0")
 
-        same = hemis_cli.check_for_updates(fetch_fn=lambda _u, _t: "1.0.0\n", local_version="1.0.0")
+        same = hemis_cli.check_for_updates(fetch_fn=lambda _u, _t: "1.0.1\n", local_version="1.0.1")
         self.assertTrue(same["checked"])
         self.assertFalse(same["update_available"])
 
         off = hemis_cli.check_for_updates(
             fetch_fn=lambda _u, _t: (_ for _ in ()).throw(OSError("offline")),
-            local_version="1.0.0",
+            local_version="1.0.1",
         )
         self.assertFalse(off["checked"])
         self.assertFalse(off["update_available"])
@@ -76,7 +76,7 @@ class CliContract(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         payload = json.loads(r.stdout)
         self.assertTrue(payload["ok"])
-        self.assertEqual(payload["version"], "1.0.0")
+        self.assertEqual(payload["version"], "1.0.1")
         self.assertEqual(payload["auth_self_test"], 23)
         self.assertEqual(payload["proxy_self_test"], 6)
         self.assertEqual(payload["bundle_self_test"], 3)
@@ -122,6 +122,19 @@ class CliContract(unittest.TestCase):
             r_clr = self._run("auth-clear", env=env)
             self.assertEqual(r_clr.returncode, 0)
             self.assertFalse(os.path.exists(vfile))
+
+            r_bom = self._run(
+                "auth-save", "--stdin",
+                env=env,
+                input_text="\ufeff" + json.dumps({"login": "teacher02", "password": "MyPassword456"}),
+            )
+            self.assertEqual(r_bom.returncode, 0, r_bom.stderr)
+            self.assertNotIn("MyPassword456", r_bom.stdout)
+            bom_out = json.loads(r_bom.stdout)
+            self.assertTrue(bom_out["ok"])
+            self.assertEqual(bom_out["login_masked"], "te***02")
+            r_clr2 = self._run("auth-clear", env=env)
+            self.assertEqual(r_clr2.returncode, 0)
 
     def test_login_requires_env_and_never_echoes(self):
         r = self._run("login")

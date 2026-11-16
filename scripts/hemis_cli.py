@@ -44,7 +44,7 @@ sys.path.insert(0, SCRIPTS_DIR)
 
 import hemis_oneid_auth as auth  # noqa: E402
 
-DEFAULT_VERSION = "1.0.0"
+DEFAULT_VERSION = "1.0.1"
 GITHUB_REPO = os.environ.get("HEMIS_SKILL_REPO", "mpython77/hemis-skill")
 GITHUB_REPO_URL = f"https://github.com/{GITHUB_REPO}"
 GITHUB_RAW_BASE = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main"
@@ -328,7 +328,8 @@ def cmd_auth_save(args: argparse.Namespace) -> int:
     password = os.environ.get("HEMIS_ONEID_PASSWORD", "")
     if getattr(args, "stdin", False):
         try:
-            payload = json.loads(sys.stdin.read() or "{}")
+            raw_stdin = (sys.stdin.read() or "{}").lstrip("\ufeff")
+            payload = json.loads(raw_stdin or "{}")
             if isinstance(payload, dict):
                 login = str(payload.get("login") or login).strip()
                 password = str(payload.get("password") or password)

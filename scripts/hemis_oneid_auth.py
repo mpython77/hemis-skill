@@ -502,6 +502,7 @@ class _GridViewParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self._in_summary = False
+        self._summary_tag = ""
         self._summary_depth = 0
         self._summary_parts: list[str] = []
         self._in_thead = False
@@ -519,10 +520,11 @@ class _GridViewParser(HTMLParser):
         raw_keys = {k.lower() for k, _ in attrs}
         cls = attr_map.get("class", "")
 
-        if tag == "div" and "summary" in cls.split() and not self._in_summary:
+        if tag in ("div", "span", "p") and "summary" in cls.split() and not self._in_summary:
             self._in_summary = True
+            self._summary_tag = tag
             self._summary_depth = 1
-        elif self._in_summary and tag == "div":
+        elif self._in_summary and tag == self._summary_tag:
             self._summary_depth += 1
 
         if tag == "thead":
@@ -546,7 +548,10 @@ class _GridViewParser(HTMLParser):
             self._cell_links = []
         elif tag == "a" and self._in_td:
             href = attr_map.get("href", "").strip()
-            if href:
+            modal_val = attr_map.get("value", "").strip()
+            if "showModalButton" in cls.split() and modal_val.startswith(("/", "http")):
+                self._cell_links.append(modal_val)
+            elif href:
                 self._cell_links.append(href)
         elif tag == "input" and self._current_row is not None:
             if attr_map.get("type", "").lower() == "checkbox" and attr_map.get("data-id"):
@@ -554,10 +559,11 @@ class _GridViewParser(HTMLParser):
                 self._current_row["active_checked"] = "checked" in raw_keys
 
     def handle_endtag(self, tag: str) -> None:
-        if self._in_summary and tag == "div":
+        if self._in_summary and tag == self._summary_tag:
             self._summary_depth -= 1
             if self._summary_depth <= 0:
                 self._in_summary = False
+                self._summary_tag = ""
         if tag == "thead":
             self._in_thead = False
         elif tag == "tbody":
@@ -585,6 +591,10 @@ class _GridViewParser(HTMLParser):
         return " ".join("".join(self._summary_parts).split())
 
 
+def _parse_spaced_int(raw: str) -> int:
+    return int(re.sub(r"[\s\xa0]+", "", raw))
+
+
 def parse_gridview(html: str) -> dict[str, Any]:
     """Parse a Yii2 GridView HTML page into summary counts, column headers, and row records."""
     parser = _GridViewParser()
@@ -592,12 +602,33 @@ def parse_gridview(html: str) -> dict[str, Any]:
     parser.close()
     summary_text = parser.summary_text
     begin = end = total = None
-    m_uz = re.search(r"Jami\s+(\d+)\s+ta\b.*?(\d+)\s*-\s*(\d+)", summary_text, re.IGNORECASE)
-    m_en = re.search(r"(\d+)\s*-\s*(\d+)\s+of\s+(\d+)", summary_text, re.IGNORECASE)
-    if m_uz:
-        total, begin, end = int(m_uz.group(1)), int(m_uz.group(2)), int(m_uz.group(3))
+    m_uz_slash = re.search(
+        r"(\d[\d\s\xa0]*)\s*-\s*(\d[\d\s\xa0]*)\s*/\s*jami\s+(\d[\d\s\xa0]*)\s+ta\b",
+        summary_text,
+        re.IGNORECASE,
+    )
+    m_uz = re.search(
+        r"Jami\s+(\d[\d\s\xa0]*)\s+ta\b.*?(\d[\d\s\xa0]*)\s*-\s*(\d[\d\s\xa0]*)",
+        summary_text,
+        re.IGNORECASE,
+    )
+    m_en = re.search(
+        r"(\d[\d\s\xa0]*)\s*-\s*(\d[\d\s\xa0]*)\s+of\s+(\d[\d\s\xa0]*)",
+        summary_text,
+        re.IGNORECASE,
+    )
+    if m_uz_slash:
+        begin = _parse_spaced_int(m_uz_slash.group(1))
+        end = _parse_spaced_int(m_uz_slash.group(2))
+        total = _parse_spaced_int(m_uz_slash.group(3))
+    elif m_uz:
+        total = _parse_spaced_int(m_uz.group(1))
+        begin = _parse_spaced_int(m_uz.group(2))
+        end = _parse_spaced_int(m_uz.group(3))
     elif m_en:
-        begin, end, total = int(m_en.group(1)), int(m_en.group(2)), int(m_en.group(3))
+        begin = _parse_spaced_int(m_en.group(1))
+        end = _parse_spaced_int(m_en.group(2))
+        total = _parse_spaced_int(m_en.group(3))
     return {
         "summary": {
             "text": summary_text or None,
@@ -732,6 +763,8 @@ def _is_unsafe_hemis_get(url: str, base_host: str) -> str | None:
         return "/dashboard/profile?certificate=1 triggers UzBMB sync"
     if path in ("/oz", "/ru", "/en") or path.startswith(("/oz/", "/ru/", "/en/")):
         return "locale prefix route mutates session language"
+    if path == "/teacher/subject-task-list" and qs.get("attribute") and qs["attribute"][0]:
+        return "/teacher/subject-task-list?attribute=... mutates task attributes on GET"
     if path == "/student/reference" and "1" in qs.get("get", []):
         return "/student/reference?get=1 creates an official certificate"
     if path in ("/student-data/rent-sync", "/student-data/upload-plagiarism"):
@@ -2135,6 +2168,7 @@ def run_self_test() -> dict[str, Any]:
     for unsafe in (
         "/message/compose",
         "/dashboard/toggle?attribute=active&model=x&id=1",
+        "/teacher/subject-task-list?id=10&attribute=active",
         "/poll/mine?set=1&p=1&o=1",
         "/file-resource/edit?id=1&delete=1",
         "/file-resource/edit?id=1&item=2&cancel=1",
@@ -2151,6 +2185,13 @@ def run_self_test() -> dict[str, Any]:
         except ValueError:
             pass
     assert _is_unsafe_hemis_get("https://hemis.namdtu.uz/message/compose?id=123", "hemis.namdtu.uz") is None
+    assert (
+        _is_unsafe_hemis_get(
+            "https://hemis.namdtu.uz/teacher/subject-task-list?curriculum=845&semester=11",
+            "hemis.namdtu.uz",
+        )
+        is None
+    )
 
     # 7. post_form injects _csrf-backend + X-CSRF-Token + Origin + Referer
     client.login_with_oneid("test_user", "test_pass")
@@ -2445,6 +2486,21 @@ def run_self_test() -> dict[str, Any]:
     assert gv["rows"][0]["active_id"] == "50001"
     assert gv["rows"][0]["active_checked"] is True
     assert gv["rows"][0]["links"] == ["/file-resource/edit?id=50001"]
+
+    live_span_grid = (
+        '<div class="box-footer"><span class="summary">1-50 / jami 1 306 ta</span></div>'
+        '<table><thead><tr><th>#</th><th>Fan</th></tr></thead>'
+        '<tbody><tr><td>1</td><td><a href="#" class="showModalButton" '
+        'value="/teacher/subject-info?curriculum=845&subject=4446&semester=11">Dasturlash</a></td></tr></tbody></table>'
+    )
+    gv_live = parse_gridview(live_span_grid)
+    assert gv_live["summary"] == {
+        "text": "1-50 / jami 1 306 ta",
+        "begin": 1,
+        "end": 50,
+        "total": 1306,
+    }
+    assert gv_live["rows"][0]["links"] == ["/teacher/subject-info?curriculum=845&subject=4446&semester=11"]
 
     # 21. Built-in resource item files parser (elFinderDialog config + hidden input fallback)
     sample_res_html = (

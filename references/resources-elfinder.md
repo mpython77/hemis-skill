@@ -23,7 +23,7 @@ Curriculum (_curriculum)
 | `/file-resource/edit?id=<res>&delete=1` | **Delete parent resource (write GET!)** | Never run casually; leaves physical elFinder file intact |
 | `/file-resource/edit?subject=1` (`POST`) | `DepDrop` allowed subjects query | Must pass `depdrop_all_params[_curriculum]` or returns HTML! |
 | `/file-resource/edit?title=1&query=<q>&cs=<cs_id>` (`GET`) | Selectize topic title autocomplete | Matches syllabus phrasing (`max 156` chars) |
-| `/files/connector` (`GET`/`POST`) | `elFinder 2.1066` storage backend | Personal `/file-resource/manager` & attach dialog |
+| `/files/connector` (`GET`/`POST`) | `elFinder 2.1069` storage backend | Personal `/file-resource/manager` & attach dialog |
 
 ## 2. Critical Pitfalls Before Auditing or Uploading
 
@@ -63,7 +63,7 @@ Curriculum (_curriculum)
 
 - Open tree: `GET /files/connector?id=esubjectfileresourceitem-files&multiple=1&cmd=open&init=1` -> read folder `hash`, `options.url`, upload limits, and **connector `csrf`** (if present).
 - **Hard constraints:**
-  - `uploadMaxSize`: **`5242880` bytes (`5 MiB`)** per file (`cmd=upload` connector limit — Telegram-sized larger files fail!).
+  - `options.uploadMaxSize`: **`5242880` bytes (`5 MiB`)** per file (`cmd=upload` connector limit, even though top-level `uplMaxSize` reports `"500M"` and `uplMaxFile: "20"` — Telegram-sized larger files fail!).
   - Allowlist: `.txt, .doc, .docx, .wps, .zip, .rar, .gz, .pdf, .jpg, .jpeg, .png, .tiff, .ppt, .pptx, .xls, .xlsx, .psd, .cdr, .mp3, .mp4, .mpeg`. Auxiliary `.html`/Maple files can be packaged inside `.zip`.
   - **CRITICAL `+` Filename Bug:** Never include `+` in uploaded filenames! Direct `/static/files/...` may succeed, but HEMIS download routes decode `+` as space (` `) and fail (`404`/broken download).
 - **Upload (`cmd=upload`):** Multipart `POST /files/connector` with `cmd=upload`, `target=<dir_hash>`, `upload[]=@<file>`, `_csrf-backend`, `X-CSRF-Token`, and **`X-elFinder-CSRF: <connector_csrf>`** (without `X-elFinder-CSRF`, writes can fail with `403` + `csrfReload:true`). Respect `uploadMaxConn: 3`.

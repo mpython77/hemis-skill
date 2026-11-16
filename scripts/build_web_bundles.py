@@ -175,7 +175,7 @@ def _read_version(root_dir: str) -> str:
             v = fh.read().strip()
             if v:
                 return v
-    return "1.0.0"
+    return "1.0.1"
 
 
 def _add_file_deterministic(
@@ -343,7 +343,7 @@ def build_openapi_schema(server_url: str = "https://your-hemis-tunnel.example.co
         "openapi": "3.1.0",
         "info": {
             "title": "HEMIS Local-UZ Bridge API",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "description": "Read-only HEMIS bridge running inside Uzbekistan with DPAPI/0600 local vault.",
         },
         "servers": [{"url": server_url.rstrip("/")}],

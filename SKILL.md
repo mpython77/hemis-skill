@@ -5,7 +5,7 @@ license: MIT
 compatibility: "Universal Agent Skill (Antigravity, Claude Code/Web, Gemini CLI/Web, ChatGPT Skills/Projects, Codex). Live HEMIS calls require Python >=3.10 stdlib (no pip) and Uzbekistan IP (or Local-UZ Remote MCP Bridge)."
 metadata:
   author: Dostonbek Mo'ydinov
-  version: "1.0.0"
+  version: "1.0.1"
   repository: https://github.com/mpython77/hemis-skill
 ---
 
@@ -34,7 +34,7 @@ metadata:
 1. **Reliable session liveness check:** `GET /dashboard/profile` with redirects disabled -> `302 -> /dashboard/login` means unauthenticated; `200` + profile identity markers confirms active; `200` without identity markers (login HTML), `404`, or network/TLS timeout does **not** confirm session state accurately — report network/TLS errors separately.
 2. **Ping is not resurrection:** `/keepalive/ping` extends active idle time (`1800s` on teacher backend; ~4 min polling on student) but cannot revive an expired session or bypass absolute server expiry/sleep.
 3. **Never GET state-mutating endpoints casually:**
-   - Teacher: `/message/compose` *(bare, no `?id=` -> creates blank DB draft)*, `/dashboard/toggle?...`, `/poll/mine?set=1&...`, `/message/my-messages?...&delete=1`, `/dashboard/logout`, `/dashboard/profile?certificate=1`, `/oz|ru|en/...`, `/file-resource/edit?id=<res>&item=<item>&cancel=1`, `/file-resource/edit?id=<res>&delete=1`, `/system/cache` *(POST)*.
+   - Teacher: `/message/compose` *(bare, no `?id=` -> creates blank DB draft)*, `/dashboard/toggle?...`, `/teacher/subject-task-list?...&attribute=...` *(`changeAttribute` GET)*, `/poll/mine?set=1&...`, `/message/my-messages?...&delete=1`, `/dashboard/logout`, `/dashboard/profile?certificate=1`, `/oz|ru|en/...`, `/file-resource/edit?id=<res>&item=<item>&cancel=1`, `/file-resource/edit?id=<res>&delete=1`, `/system/cache` *(POST)*.
    - Student: `/student/reference?get=1` *(generates new certificate)*, `/student-data/rent-sync` *(sync action)*, `/student-data/upload-plagiarism` *(consumes quota)*, `/dashboard/logout`.
    - Never force-close an active browser or pry open locked browser profile DBs to harvest cookies.
 4. **Confirm before irreversible/write actions:** Locking vedomost (`POST /teacher/check-overall-rating`), deleting resources/files/messages, submitting grades/attendance, posting announcements/applications/signatures, or overwriting existing attachments. Pause `0.25s–0.6s` between sequential requests; avoid spamming parallel scrapes.
@@ -61,6 +61,8 @@ metadata:
 - For `/file-resource/edit` POST: field name is `ESubjectFileResource[_curriculum_subject]` (DOM id `#_subject`), never `_subject`. Never put `+` in uploaded filenames.
 - On download tests (`/file-resource/edit?id=<id>&download=<id>[&index=<idx>]`): `HTTP 200` + `text/html` means failure; inspect binary/ZIP members, individual `HEAD` status, and SHA-256 hashes.
 - Use `UTC+05:00` (`Asia/Tashkent`) whenever interpreting `"bugun"`, `"ertaga"`, or UNIX `lesson_date` timestamps.
+- In `/teacher/attendance-journal`, never sum same-date columns across pages blindly (`SZ` summary + `/teacher/check-lesson?id=<id>` is ground truth); in `/teacher/rating-journal`, non-owned lesson links return `404` on `/teacher/check-grade?id=...`, and absent (`NB`) students are server-disabled.
+- Send `X-Requested-With: XMLHttpRequest` when fetching `.showModalButton` routes like `/teacher/subject-info?curriculum=...&subject=...&semester=...` directly; `/teacher/calendar-plan?...&download=1` returns PDF, while `/teacher/check-overall-rating?id=...&access=1` returns `.docx`.
 - For Student REST: `/rest/v1` already contains `/v1`; `/education/exam-table` requires `semester=<id>` (`400` otherwise); `/student/contract` returns `400` on grant students; `/education/semesters` can mark multiple rows `current=true`.
 
 ## 5. Bundled Automation (`scripts/`, stdlib-only, Python 3.10+)

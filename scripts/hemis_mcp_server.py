@@ -45,7 +45,7 @@ import hemis_oneid_auth as auth  # noqa: E402
 
 MCP_PROTOCOL_VERSIONS = ("2025-03-26", "2024-11-05")
 SERVER_NAME = "hemis-mcp"
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.0.1"
 DEFAULT_MAX_OUTPUT_CHARS = 35_000
 
 MCP_TOOLS: list[dict[str, Any]] = [
