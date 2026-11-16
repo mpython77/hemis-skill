@@ -1,0 +1,35 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Compile
+        run: python -m compileall -q scripts
+      - name: Unit + self tests (offline, no credentials, no network to HEMIS)
+        run: python -m unittest discover -s tests -v
+      - name: Build & validate Web Skill bundles (Claude / Gemini / ChatGPT)
+        run: python scripts/hemis_cli.py bundle
+      - name: Upload Web Skill bundles artifact
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hemis-web-bundles
+          path: dist/

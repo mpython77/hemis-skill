@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.env
+.env.*
+*.cookies
+*cookies*.txt
+*cookies*.json
+*credentials*.json
+.hemis/
+dist/
+exports/
+data/
+.venv/
+.idea/
+.vscode/
