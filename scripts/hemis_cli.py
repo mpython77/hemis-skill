@@ -335,6 +335,13 @@ def cmd_auth_save(args: argparse.Namespace) -> int:
                 password = str(payload.get("password") or password)
         except json.JSONDecodeError as exc:
             return _emit({"ok": False, "error": f"Invalid JSON on stdin: {exc}"}, 2)
+    elif (not login or not password) and sys.stdin.isatty():
+        import getpass
+
+        if not login:
+            login = input("OneID login: ").strip()
+        if not password:
+            password = getpass.getpass("OneID password: ")
     if not login or not password:
         return _emit(
             {

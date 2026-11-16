@@ -4,7 +4,8 @@
 - Verified live HEMIS `v1.9.90` / `Yadro 2.0.55` (`elFinder 2.1069`) via authenticated browser & HTTP inspection across all 37 quick-menu routes.
 - Fixed `parse_gridview()` (`hemis_oneid_auth.py`): supports `<span class="summary">1-50 / jami 1 306 ta</span>` (spaced thousands) and captures `.showModalButton` `value` modal URLs.
 - Hardened `_is_unsafe_hemis_get()` to block `/teacher/subject-task-list?...&attribute=...` (`changeAttribute` GET mutation).
-- Fixed `hemis_cli.py auth-save --stdin` to strip UTF-8 BOM (`\ufeff`) from Windows PowerShell pipelines.
+- Fixed `hemis_cli.py auth-save`: strips UTF-8 BOM (`\ufeff`) from `--stdin` on Windows PowerShell and adds interactive TTY `input()` / `getpass()` prompts when invoked without env vars or `--stdin`.
+- Clarified `claude.ai` sandbox egress proxy (`403 CONNECT policy denial`) + Geo-IP `451` constraints in `SKILL.md` and `docs/WEB_PLATFORMS.md` (use Local-UZ `hemis_mcp_server.py` + `cloudflared tunnel` Custom Connector for live access).
 - Updated `references/` and `SKILL.md`: `check-grade` (`NB` disabled inputs, `404` on non-owned lessons), `qr-attendance` (`302` when saved, `opacity:0.3`), `attendance-journal` same-date cross-lesson render quirk, `subject-info` `X-Requested-With` requirement, `calendar-plan` PDF vs `check-overall-rating?access=1` `.docx`, `ESubjectTask` / `EExam` / `EPublication*` / `EStudentPttSubject` / `EDocumentSigner` / `ETeacherLoad` schemas, and `403`/`404`/`500` role boundaries.
 
 ## 1.0.0 — 2026-11-15
